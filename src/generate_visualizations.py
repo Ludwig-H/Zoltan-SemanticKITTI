@@ -9,6 +9,24 @@ sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 from pipeline import SemanticKITTILoader, filter_ground_plane
 from hgp_clusterer import HGPClusterer
 
+# Monkeypatch orderk_delaunay3 pour mettre en cache les triangulations Delaunay d'ordre K.
+# La triangulation de Delaunay d'ordre K ne dépend pas d'expZ, ce qui évite de recalculer
+# la triangulation 3 fois par valeur de K sur chaque frame !
+import hgp_clusterer.hypergraph
+
+original_orderk_delaunay3 = hgp_clusterer.hypergraph.orderk_delaunay3
+delaunay_cache = {}
+
+def cached_orderk_delaunay3(M, K, *args, **kwargs):
+    # La clé dépend de l'ID du tableau de coordonnées (constant par frame) et de K
+    key = (id(M), K)
+    if key not in delaunay_cache:
+        delaunay_cache[key] = original_orderk_delaunay3(M, K, *args, **kwargs)
+    return delaunay_cache[key]
+
+hgp_clusterer.hypergraph.orderk_delaunay3 = cached_orderk_delaunay3
+
+
 # Paramètres globaux de la sémantique
 SEMANTIC_NAMES = {
     0: "unlabeled", 1: "outlier", 10: "car", 11: "bicycle", 13: "bus", 15: "motorcycle",
@@ -38,7 +56,7 @@ def generate_visualizations():
     ]
     
     Ks = [1, 2, 3, 4, 5]
-    expZs = [1.0, 1.5, 2.0]
+    expZs = [1.0, 1.5, 2.0, 2.5, 3.0]
     
     available_data = {
         "sequences": []
@@ -63,6 +81,9 @@ def generate_visualizations():
         valid_frames = []
         
         for frame in frames:
+            # Vider le cache de Delaunay à chaque nouvelle frame pour éviter la fuite de mémoire
+            delaunay_cache.clear()
+            
             if frame >= len(loader.scan_files):
                 print(f"Frame {frame} non disponible pour la séquence {seq_str}. On arrête là.")
                 break
