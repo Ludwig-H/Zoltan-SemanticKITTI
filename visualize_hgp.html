@@ -1,0 +1,842 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>HGP-Clusterer Multi-Parameters 3D WebGL Dashboard</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body { 
+            margin: 0; 
+            padding: 0; 
+            overflow: hidden; 
+            background-color: #0c0c0e; 
+            font-family: 'Inter', sans-serif; 
+            color: #f3f4f6; 
+        }
+        #canvas-container { 
+            width: 100vw; 
+            height: 100vh; 
+            position: absolute; 
+            z-index: 1; 
+        }
+        
+        /* Top Bar de Contrôles */
+        #control-panel {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            right: 20px;
+            z-index: 10;
+            display: flex;
+            gap: 12px;
+            align-items: center;
+            background: rgba(18, 18, 22, 0.75);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            border-radius: 12px;
+            padding: 12px 20px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4);
+            flex-wrap: wrap;
+        }
+        
+        .selector-group {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .selector-group label {
+            font-size: 12px;
+            font-weight: 600;
+            color: #9ca3af;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+        
+        .select-input {
+            background: rgba(31, 41, 55, 0.8);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            color: #ffffff;
+            padding: 6px 12px;
+            border-radius: 6px;
+            font-size: 13px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            outline: none;
+        }
+        .select-input:hover {
+            border-color: rgba(255, 255, 255, 0.3);
+            background: rgba(55, 65, 81, 0.8);
+        }
+        
+        .divider {
+            width: 1px;
+            height: 24px;
+            background: rgba(255, 255, 255, 0.1);
+            margin: 0 4px;
+        }
+        
+        .btn {
+            background: rgba(31, 41, 55, 0.6);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            color: #d1d5db;
+            padding: 8px 16px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: 600;
+            font-size: 13px;
+            transition: all 0.2s ease;
+        }
+        .btn:hover {
+            background: rgba(255, 255, 255, 0.1);
+            color: #fff;
+            border-color: rgba(255, 255, 255, 0.3);
+        }
+        .btn.active {
+            background: linear-gradient(135deg, #2563eb, #3b82f6);
+            border-color: #60a5fa;
+            color: #ffffff;
+            box-shadow: 0 0 15px rgba(59, 130, 246, 0.4);
+        }
+        
+        .slider-container {
+            display: flex;
+            align-items: center;
+            color: #fff;
+            font-size: 13px;
+            font-weight: 600;
+            gap: 10px;
+        }
+        .slider-container label {
+            color: #9ca3af;
+            font-size: 12px;
+            text-transform: uppercase;
+        }
+        input[type="range"] {
+            cursor: pointer;
+            accent-color: #3b82f6;
+            width: 80px;
+        }
+        #size-val {
+            min-width: 25px;
+            text-align: right;
+            color: #60a5fa;
+        }
+        
+        /* Dashboard de statistiques */
+        #stats-dashboard {
+            position: absolute;
+            top: 100px;
+            right: 20px;
+            width: 320px;
+            max-height: calc(100vh - 140px);
+            overflow-y: auto;
+            background: rgba(18, 18, 22, 0.8);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            border-radius: 12px;
+            padding: 20px;
+            z-index: 10;
+            box-shadow: 0 10px 35px rgba(0, 0, 0, 0.5);
+        }
+        #stats-dashboard::-webkit-scrollbar {
+            width: 6px;
+        }
+        #stats-dashboard::-webkit-scrollbar-thumb {
+            background: rgba(255, 255, 255, 0.15);
+            border-radius: 3px;
+        }
+        
+        .dashboard-title {
+            font-size: 16px;
+            font-weight: 700;
+            margin-bottom: 12px;
+            background: linear-gradient(135deg, #60a5fa, #c084fc);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            padding-bottom: 8px;
+        }
+        .section-title {
+            font-size: 11px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            color: #9ca3af;
+            margin: 15px 0 8px 0;
+            border-bottom: 1px dashed rgba(255, 255, 255, 0.06);
+            padding-bottom: 3px;
+        }
+        .stat-row {
+            display: flex;
+            justify-content: space-between;
+            font-size: 13px;
+            margin-bottom: 6px;
+        }
+        .stat-label {
+            color: #9ca3af;
+        }
+        .stat-value {
+            font-weight: 600;
+            color: #ffffff;
+        }
+        .class-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 5px;
+            font-size: 12px;
+        }
+        .class-table th {
+            text-align: left;
+            color: #9ca3af;
+            font-weight: 500;
+            padding-bottom: 5px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        .class-table td {
+            padding: 5px 0;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.03);
+        }
+        .class-name-col {
+            display: flex;
+            align-items: center;
+        }
+        .color-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            margin-right: 8px;
+            display: inline-block;
+        }
+        .align-right {
+            text-align: right;
+        }
+        
+        /* Overlays (Loading & Error) */
+        #loading-overlay {
+            position: absolute;
+            top: 0; left: 0; width: 100vw; height: 100vh;
+            background: rgba(12, 12, 14, 0.85);
+            z-index: 100;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            transition: opacity 0.3s ease;
+            pointer-events: none;
+            opacity: 0;
+        }
+        #loading-overlay.visible {
+            opacity: 1;
+            pointer-events: auto;
+        }
+        .spinner {
+            width: 40px;
+            height: 40px;
+            border: 4px solid rgba(255, 255, 255, 0.1);
+            border-top-color: #3b82f6;
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+        }
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+        
+        #error-banner {
+            position: absolute;
+            bottom: 20px;
+            left: 20px;
+            background: rgba(220, 38, 38, 0.9);
+            border: 1px solid #ef4444;
+            color: white;
+            padding: 12px 20px;
+            border-radius: 8px;
+            font-size: 13px;
+            font-weight: 500;
+            z-index: 1000;
+            display: none;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.3);
+        }
+    </style>
+</head>
+<body>
+    <div id="control-panel">
+        <div class="selector-group">
+            <label for="select-seq">Séquence</label>
+            <select id="select-seq" class="select-input">
+                <option value="">Chargement...</option>
+            </select>
+        </div>
+        <div class="selector-group">
+            <label for="select-frame">Trame</label>
+            <select id="select-frame" class="select-input"></select>
+        </div>
+        
+        <div class="divider"></div>
+        
+        <div class="selector-group">
+            <label for="select-k">K</label>
+            <select id="select-k" class="select-input"></select>
+        </div>
+        <div class="selector-group">
+            <label for="select-expz">expZ</label>
+            <select id="select-expz" class="select-input"></select>
+        </div>
+        
+        <div class="divider"></div>
+        
+        <button id="btn-hgp" class="btn active" onclick="setViewMode('hgp')">Clusters HGP</button>
+        <button id="btn-sem" class="btn" onclick="setViewMode('sem')">Sémantique (GT)</button>
+        <button id="btn-inst" class="btn" onclick="setViewMode('inst')">Instances (GT)</button>
+        
+        <div class="divider"></div>
+        
+        <div class="slider-container">
+            <label for="size-slider">Taille</label>
+            <input type="range" id="size-slider" min="0.1" max="3.0" step="0.1" value="0.6" oninput="updatePointSize(this.value)">
+            <span id="size-val">0.6</span>
+        </div>
+    </div>
+    
+    <div id="stats-dashboard">
+        <div class="dashboard-title">HGP-Clusterer 3D WebGL</div>
+        
+        <div class="section-title">Paramètres actifs</div>
+        <div class="stat-row"><span class="stat-label">Séquence</span><span id="stat-seq" class="stat-value">-</span></div>
+        <div class="stat-row"><span class="stat-label">Trame</span><span id="stat-frame" class="stat-value">-</span></div>
+        <div class="stat-row"><span class="stat-label">Type Complexe</span><span class="stat-value" style="color: #c084fc; font-size: 11px;">orderk_delaunay</span></div>
+        <div class="stat-row"><span class="stat-label">Paramètre K</span><span id="stat-k" class="stat-value">-</span></div>
+        <div class="stat-row"><span class="stat-label">Paramètre expZ</span><span id="stat-expz" class="stat-value">-</span></div>
+        
+        <div class="section-title">Statistiques géométriques</div>
+        <div class="stat-row"><span class="stat-label">Points hors-sol</span><span id="stat-pts" class="stat-value">-</span></div>
+        <div class="stat-row"><span class="stat-label">Clusters HGP détectés</span><span id="stat-clusters" class="stat-value" style="color: #60a5fa;">-</span></div>
+        <div class="stat-row"><span class="stat-label">Temps calcul HGP</span><span id="stat-time" class="stat-value">-</span></div>
+        
+        <div class="section-title">Classes Sémantiques (Vérité Terrain)</div>
+        <table class="class-table">
+            <thead>
+                <tr>
+                    <th>Classe</th>
+                    <th class="align-right">Points</th>
+                    <th class="align-right">Instances</th>
+                </tr>
+            </thead>
+            <tbody id="class-table-body">
+                <tr>
+                    <td colspan="3" style="color: #9ca3af; text-align: center; padding: 10px 0;">Aucune donnée</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+
+    <div id="error-banner"></div>
+    
+    <div id="loading-overlay" class="visible">
+        <div class="spinner"></div>
+        <div style="margin-top: 15px; font-weight: 600; font-size: 14px;">Initialisation de l'application...</div>
+    </div>
+
+    <div id="canvas-container"></div>
+
+    <!-- Scripts CDN pour Three.js et OrbitControls -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+
+    <script>
+        // --- 1. VARIABLES D'ÉTAT & CONFIGURATION ---
+        let catalog = null;
+        let positions = new Float32Array(0);
+        let sem_gt = [];
+        let inst_gt = [];
+        let hgp_labels = [];
+        let currentViewMode = 'hgp';
+        let pointSizeMultiplier = 0.6;
+        
+        // Buffers de rendu
+        let hgpColors = null, hgpSizes = null, hgpOpacities = null;
+        let semColors = null, semSizes = null, semOpacities = null;
+        let instColors = null, instSizes = null, instOpacities = null;
+        
+        // Palette de couleurs distinctes hex pour les clusters
+        const colors_palette = ['#1f77b4', '#ff7f0e', '#2ca02c', '#d62728', '#9467bd', '#8c564b', '#e377c2', '#bcbd22', '#17becf'];
+        
+        // Conversion de couleur hex en tableau RGB [r, g, b] normalisé (0..1)
+        function hexToRgb(hex) {
+            hex = hex.replace('#', '');
+            const r = parseInt(hex.substring(0, 2), 16) / 255.0;
+            const g = parseInt(hex.substring(2, 4), 16) / 255.0;
+            const b = parseInt(hex.substring(4, 6), 16) / 255.0;
+            return [r, g, b];
+        }
+        const rgb_palette = colors_palette.map(hexToRgb);
+
+        // --- 2. CONFIGURATION DE LA SCÈNE THREE.JS ---
+        let scene, camera, renderer, controls, geometry, material, pointCloud;
+        
+        function setupThree() {
+            const container = document.getElementById('canvas-container');
+            scene = new THREE.Scene();
+            scene.fog = new THREE.FogExp2(0x0c0c0e, 0.005);
+
+            camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 1000);
+            camera.position.set(0, 40, 80);
+
+            renderer = new THREE.WebGLRenderer({ antialias: true });
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+            container.appendChild(renderer.domElement);
+
+            controls = new THREE.OrbitControls(camera, renderer.domElement);
+            controls.enableDamping = true;
+            controls.dampingFactor = 0.05;
+            controls.maxPolarAngle = Math.PI / 2 + 0.1;
+
+            // Grille de sol
+            const gridHelper = new THREE.GridHelper(300, 150, 0x444444, 0x1a1a1f);
+            gridHelper.position.y = -2;
+            scene.add(gridHelper);
+
+            // Shader Material pour dessiner des points parfaitement ronds
+            const vertexShader = `
+                uniform float sizeMultiplier;
+                attribute float size;
+                attribute float opacity;
+                varying vec3 vColor;
+                varying float vOpacity;
+                void main() {
+                    vColor = color;
+                    vOpacity = opacity;
+                    vec4 mvPosition = modelViewMatrix * vec4(position, 1.0);
+                    gl_PointSize = size * sizeMultiplier * (300.0 / -mvPosition.z);
+                    gl_Position = projectionMatrix * mvPosition;
+                }
+            `;
+
+            const fragmentShader = `
+                varying vec3 vColor;
+                varying float vOpacity;
+                void main() {
+                    vec2 temp = gl_PointCoord - vec2(0.5);
+                    if (dot(temp, temp) > 0.25) discard;
+                    gl_FragColor = vec4(vColor, vOpacity);
+                }
+            `;
+
+            geometry = new THREE.BufferGeometry();
+            
+            material = new THREE.ShaderMaterial({
+                uniforms: {
+                    sizeMultiplier: { value: pointSizeMultiplier }
+                },
+                vertexShader: vertexShader,
+                fragmentShader: fragmentShader,
+                transparent: true,
+                depthWrite: false,
+                vertexColors: true
+            });
+
+            pointCloud = new THREE.Points(geometry, material);
+            scene.add(pointCloud);
+
+            window.addEventListener('resize', onWindowResize);
+        }
+
+        function onWindowResize() {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        }
+
+        function animate() {
+            requestAnimationFrame(animate);
+            controls.update();
+            renderer.render(scene, camera);
+        }
+
+        // Centrer la caméra sur le centroïde du nuage de points
+        function recenterCamera() {
+            if (positions.length === 0) return;
+            let sumX = 0, sumY = 0, sumZ = 0;
+            const count = positions.length / 3;
+            for (let i = 0; i < positions.length; i += 3) {
+                sumX += positions[i];
+                sumY += positions[i+1];
+                sumZ += positions[i+2];
+            }
+            const centroid = new THREE.Vector3(sumX / count, sumY / count, sumZ / count);
+            controls.target.copy(centroid);
+            camera.position.set(centroid.x, centroid.y + 30, centroid.z + 60);
+            controls.update();
+        }
+
+        // --- 3. CHARGEMENT DE LA GÉOMÉTRIE ET DES CLUSTERS ---
+        
+        async function loadFrame() {
+            showLoading("Chargement de la géométrie de la trame...");
+            hideError();
+            
+            const seqId = document.getElementById('select-seq').value;
+            const frameIdx = document.getElementById('select-frame').value;
+            
+            // Mise à jour de l'affichage des paramètres actifs
+            document.getElementById('stat-seq').textContent = seqId;
+            document.getElementById('stat-frame').textContent = frameIdx;
+            
+            try {
+                const response = await fetch(`visualize/data_seq${seqId}_frame${String(frameIdx).padStart(4, '0')}.json`);
+                if (!response.ok) throw new Error(`Le fichier de géométrie n'a pas pu être chargé.`);
+                const data = await response.json();
+                
+                positions = new Float32Array(data.positions);
+                sem_gt = data.sem_gt;
+                inst_gt = data.inst_gt;
+                
+                // Mettre à jour la table des classes sémantiques réelles
+                updateSemanticTable(data.class_stats);
+                
+                // Calculer les buffers pour la sémantique et les instances
+                computeSemanticBuffers();
+                computeInstanceBuffers();
+                
+                // Mettre à jour l'attribut de position de la géométrie Three.js
+                geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+                geometry.computeBoundingSphere();
+                
+                recenterCamera();
+                
+                // Charger le clustering pour les paramètres actuels
+                await loadClusters();
+            } catch (err) {
+                showError(`Erreur de chargement de la trame : ${err.message}`);
+                console.error(err);
+            } finally {
+                hideLoading();
+            }
+        }
+
+        async function loadClusters() {
+            showLoading("Chargement des clusters HGP...");
+            hideError();
+            
+            const seqId = document.getElementById('select-seq').value;
+            const frameIdx = document.getElementById('select-frame').value;
+            const K = document.getElementById('select-k').value;
+            const expZ = parseFloat(document.getElementById('select-expz').value).toFixed(1);
+            
+            // Mise à jour des stats actives
+            document.getElementById('stat-k').textContent = K;
+            document.getElementById('stat-expz').textContent = expZ;
+            
+            try {
+                const response = await fetch(`visualize/clusters_seq${seqId}_frame${String(frameIdx).padStart(4, '0')}_K${K}_expZ${expZ}.json`);
+                if (!response.ok) throw new Error(`Clustering non pré-calculé pour K=${K} et expZ=${expZ}.`);
+                const data = await response.json();
+                
+                hgp_labels = data.labels;
+                
+                // Mettre à jour l'UI avec les statistiques du clustering
+                document.getElementById('stat-clusters').textContent = data.num_clusters;
+                document.getElementById('stat-time').textContent = data.elapsed_seconds.toFixed(3) + ' s';
+                
+                // Calculer le buffer HGP
+                computeHGPBuffers();
+                
+                // Rafraîchir l'affichage
+                setViewMode(currentViewMode);
+            } catch (err) {
+                showError(`Erreur de chargement des clusters : ${err.message}`);
+                // Vider les stats
+                document.getElementById('stat-clusters').textContent = "-";
+                document.getElementById('stat-time').textContent = "-";
+                
+                // Vider le buffer HGP
+                hgpColors = null;
+                setViewMode(currentViewMode);
+                console.error(err);
+            } finally {
+                hideLoading();
+            }
+        }
+
+        // --- 4. CALCULS DES BUFFERS GPU EN JAVASCRIPT ---
+        
+        function computeHGPBuffers() {
+            const n_pts = positions.length / 3;
+            hgpColors = new Float32Array(n_pts * 3);
+            hgpSizes = new Float32Array(n_pts);
+            hgpOpacities = new Float32Array(n_pts);
+            
+            for (let i = 0; i < n_pts; i++) {
+                const lab = hgp_labels[i];
+                if (lab === -1) {
+                    hgpColors[i*3] = 0.8;
+                    hgpColors[i*3+1] = 0.8;
+                    hgpColors[i*3+2] = 0.8;
+                    hgpSizes[i] = 1.0;
+                    hgpOpacities[i] = 0.15;
+                } else {
+                    const rgb = rgb_palette[lab % rgb_palette.length];
+                    hgpColors[i*3] = rgb[0];
+                    hgpColors[i*3+1] = rgb[1];
+                    hgpColors[i*3+2] = rgb[2];
+                    hgpSizes[i] = 2.0;
+                    hgpOpacities[i] = 0.65;
+                }
+            }
+        }
+
+        function computeSemanticBuffers() {
+            const n_pts = positions.length / 3;
+            semColors = new Float32Array(n_pts * 3);
+            semSizes = new Float32Array(n_pts);
+            semOpacities = new Float32Array(n_pts);
+            
+            const groundClasses = [40, 44, 48, 72]; // route, trottoir, autre sol, terrain
+            
+            for (let i = 0; i < n_pts; i++) {
+                const classId = sem_gt[i];
+                const hexColor = SEMANTIC_COLORS[classId] || '#cccccc';
+                const rgb = hexToRgb(hexColor);
+                const isGround = groundClasses.includes(classId);
+                
+                semColors[i*3] = rgb[0];
+                semColors[i*3+1] = rgb[1];
+                semColors[i*3+2] = rgb[2];
+                semSizes[i] = isGround ? 1.5 : 2.5;
+                semOpacities[i] = isGround ? 0.20 : 0.80;
+            }
+        }
+
+        function computeInstanceBuffers() {
+            const n_pts = positions.length / 3;
+            instColors = new Float32Array(n_pts * 3);
+            instSizes = new Float32Array(n_pts);
+            instOpacities = new Float32Array(n_pts);
+            
+            for (let i = 0; i < n_pts; i++) {
+                const instId = inst_gt[i];
+                if (instId === 0) {
+                    instColors[i*3] = 0.8;
+                    instColors[i*3+1] = 0.8;
+                    instColors[i*3+2] = 0.8;
+                    instSizes[i] = 1.0;
+                    instOpacities[i] = 0.15;
+                } else {
+                    const rgb = rgb_palette[instId % rgb_palette.length];
+                    instColors[i*3] = rgb[0];
+                    instColors[i*3+1] = rgb[1];
+                    instColors[i*3+2] = rgb[2];
+                    instSizes[i] = 2.0;
+                    instOpacities[i] = 0.80;
+                }
+            }
+        }
+
+        // --- 5. INTERACTIVITÉ & GESTION DE L'INTERFACE ---
+        
+        function setViewMode(mode) {
+            currentViewMode = mode;
+            
+            const btnHGP = document.getElementById('btn-hgp');
+            const btnSem = document.getElementById('btn-sem');
+            const btnInst = document.getElementById('btn-inst');
+            
+            btnHGP.classList.remove('active');
+            btnSem.classList.remove('active');
+            btnInst.classList.remove('active');
+            
+            let currentColors = null, currentSizes = null, currentOpacities = null;
+            
+            if (mode === 'hgp') {
+                btnHGP.classList.add('active');
+                currentColors = hgpColors;
+                currentSizes = hgpSizes;
+                currentOpacities = hgpOpacities;
+            } else if (mode === 'sem') {
+                btnSem.classList.add('active');
+                currentColors = semColors;
+                currentSizes = semSizes;
+                currentOpacities = semOpacities;
+            } else if (mode === 'inst') {
+                btnInst.classList.add('active');
+                currentColors = instColors;
+                currentSizes = instSizes;
+                currentOpacities = instOpacities;
+            }
+            
+            if (currentColors && geometry) {
+                geometry.setAttribute('color', new THREE.BufferAttribute(currentColors, 3));
+                geometry.setAttribute('size', new THREE.BufferAttribute(currentSizes, 1));
+                geometry.setAttribute('opacity', new THREE.BufferAttribute(currentOpacities, 1));
+                
+                geometry.attributes.color.needsUpdate = true;
+                geometry.attributes.size.needsUpdate = true;
+                geometry.attributes.opacity.needsUpdate = true;
+            } else if (geometry) {
+                // Si les buffers n'existent pas (ex: erreur de chargement HGP), on met une couleur grise
+                const n_pts = positions.length / 3;
+                const fallbackC = new Float32Array(n_pts * 3).fill(0.5);
+                const fallbackS = new Float32Array(n_pts).fill(1.5);
+                const fallbackO = new Float32Array(n_pts).fill(0.3);
+                geometry.setAttribute('color', new THREE.BufferAttribute(fallbackC, 3));
+                geometry.setAttribute('size', new THREE.BufferAttribute(fallbackS, 1));
+                geometry.setAttribute('opacity', new THREE.BufferAttribute(fallbackO, 1));
+            }
+        }
+
+        function updatePointSize(val) {
+            pointSizeMultiplier = parseFloat(val);
+            if (material) {
+                material.uniforms.sizeMultiplier.value = pointSizeMultiplier;
+            }
+            document.getElementById('size-val').innerText = val;
+        }
+
+        function updateSemanticTable(stats) {
+            const tbody = document.getElementById('class-table-body');
+            tbody.innerHTML = '';
+            
+            if (!stats || stats.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="3" style="color: #9ca3af; text-align: center; padding: 10px 0;">Aucune donnée</td></tr>`;
+                return;
+            }
+            
+            stats.forEach(s => {
+                const instDisplay = s.instances > 0 ? s.instances.toLocaleString() : "-";
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td>
+                        <div class="class-name-col">
+                            <span class="color-dot" style="background-color: ${s.color};"></span>
+                            ${s.name}
+                        </div>
+                    </td>
+                    <td class="align-right">${s.pts.toLocaleString()}</td>
+                    <td class="align-right">${instDisplay}</td>
+                `;
+                tbody.appendChild(row);
+            });
+        }
+
+        // --- 6. INITIALISATION & NAVIGATION DU CATALOGUE ---
+        
+        async function initCatalog() {
+            try {
+                const response = await fetch('visualize/available_data.json');
+                if (!response.ok) throw new Error("Le fichier catalogue 'available_data.json' est introuvable. Exécutez d'abord le script python de génération.");
+                catalog = await response.json();
+                
+                setupSelectors();
+                setupThree();
+                animate();
+                
+                // Charger le premier couple séquence/trame
+                await loadFrame();
+            } catch (err) {
+                showError(`Erreur d'initialisation : ${err.message}`);
+                console.error(err);
+            } finally {
+                hideLoading();
+            }
+        }
+
+        function setupSelectors() {
+            const seqSelect = document.getElementById('select-seq');
+            seqSelect.innerHTML = '';
+            
+            catalog.sequences.forEach(seq => {
+                const opt = document.createElement('option');
+                opt.value = seq.id;
+                opt.textContent = `Séquence ${seq.id}`;
+                seqSelect.appendChild(opt);
+            });
+            
+            // Remplir les sélections pour K et expZ du catalogue (on prend les valeurs de la première séquence)
+            const firstSeq = catalog.sequences[0];
+            
+            const kSelect = document.getElementById('select-k');
+            kSelect.innerHTML = '';
+            firstSeq.Ks.forEach(k => {
+                const opt = document.createElement('option');
+                opt.value = k;
+                opt.textContent = `K = ${k}`;
+                if (k === 3) opt.selected = true; // Valeur par défaut
+                kSelect.appendChild(opt);
+            });
+            
+            const expZSelect = document.getElementById('select-expz');
+            expZSelect.innerHTML = '';
+            firstSeq.expZs.forEach(expz => {
+                const opt = document.createElement('option');
+                opt.value = expz;
+                opt.textContent = `expZ = ${expz.toFixed(1)}`;
+                if (expz === 2.0) opt.selected = true; // Valeur par défaut
+                expZSelect.appendChild(opt);
+            });
+            
+            // Event listeners
+            seqSelect.addEventListener('change', () => {
+                updateFrameSelector();
+                loadFrame();
+            });
+            
+            updateFrameSelector();
+            
+            document.getElementById('select-frame').addEventListener('change', loadFrame);
+            kSelect.addEventListener('change', loadClusters);
+            expZSelect.addEventListener('change', loadClusters);
+        }
+
+        function updateFrameSelector() {
+            const seqId = document.getElementById('select-seq').value;
+            const seq = catalog.sequences.find(s => s.id === seqId);
+            const frameSelect = document.getElementById('select-frame');
+            frameSelect.innerHTML = '';
+            
+            seq.frames.forEach(f => {
+                const opt = document.createElement('option');
+                opt.value = f;
+                opt.textContent = `Trame ${f}`;
+                frameSelect.appendChild(opt);
+            });
+        }
+
+        // --- 7. UTILS: CHARGEMENT & ERREURS ---
+        
+        function showLoading(msg) {
+            const overlay = document.getElementById('loading-overlay');
+            overlay.querySelector('div:nth-child(2)').innerText = msg;
+            overlay.classList.add('visible');
+        }
+        
+        function hideLoading() {
+            document.getElementById('loading-overlay').classList.remove('visible');
+        }
+        
+        function showError(msg) {
+            const banner = document.getElementById('error-banner');
+            banner.innerText = msg;
+            banner.style.display = 'block';
+        }
+        
+        function hideError() {
+            document.getElementById('error-banner').style.display = 'none';
+        }
+
+        // Dictionnaire global de couleurs SemanticKITTI
+        const SEMANTIC_COLORS = {
+            0: '#cccccc', 1: '#999999', 10: '#004cff', 11: '#ffd400', 13: '#ff7c00', 15: '#ff0000',
+            16: '#800000', 18: '#cc00ff', 20: '#5c007a', 30: '#ff1493', 31: '#ff007f', 32: '#8b008b',
+            40: '#555555', 44: '#773377', 48: '#5c4033', 49: '#64a0f0', 50: '#006400', 51: '#a52a2a',
+            70: '#00aa00', 71: '#8b5a2b', 72: '#7cfc00', 80: '#ff8800', 81: '#00ffff'
+        };
+
+        // Démarrer l'initialisation au chargement de la page
+        window.addEventListener('DOMContentLoaded', initCatalog);
+    </script>
+</body>
+</html>

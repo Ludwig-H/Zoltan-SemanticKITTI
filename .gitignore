@@ -104,6 +104,7 @@ venv.bak/
 
 # Project-specific datasets
 data/
+visualize/
 datasets/
 semantic_kitti_data/
 *.zip
