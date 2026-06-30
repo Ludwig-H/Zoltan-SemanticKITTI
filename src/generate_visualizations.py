@@ -18,8 +18,8 @@ original_orderk_delaunay3 = hgp_clusterer.hypergraph.orderk_delaunay3
 delaunay_cache = {}
 
 def cached_orderk_delaunay3(M, K, *args, **kwargs):
-    # La clé dépend de l'ID du tableau de coordonnées (constant par frame) et de K
-    key = (id(M), K)
+    # La clé dépend de la taille du tableau (constant par frame) et de K
+    key = (M.shape[0], K)
     if key not in delaunay_cache:
         delaunay_cache[key] = original_orderk_delaunay3(M, K, *args, **kwargs)
     return delaunay_cache[key]
@@ -151,6 +151,12 @@ def generate_visualizations():
             # 2. Lancement du clustering pour chaque paramètre K, expZ
             for K in Ks:
                 for expZ in expZs:
+                    cluster_file = f"clusters_seq{seq_str}_frame{frame:04d}_K{K}_expZ{expZ:.1f}.json"
+                    cluster_filepath = os.path.join(visualize_dir, cluster_file)
+                    if os.path.exists(cluster_filepath) and os.path.getsize(cluster_filepath) > 0:
+                        print(f"Fichier {cluster_file} existe déjà. Saut du calcul.")
+                        continue
+
                     print(f"Lancement de HGP-Clusterer (K={K}, expZ={expZ:.1f}, complex_chosen='orderk_delaunay')...")
                     start_time = time.time()
                     
@@ -175,8 +181,6 @@ def generate_visualizations():
                         "elapsed_seconds": elapsed
                     }
                     
-                    cluster_file = f"clusters_seq{seq_str}_frame{frame:04d}_K{K}_expZ{expZ:.1f}.json"
-                    cluster_filepath = os.path.join(visualize_dir, cluster_file)
                     with open(cluster_filepath, "w") as f:
                         json.dump(cluster_data, f)
                         

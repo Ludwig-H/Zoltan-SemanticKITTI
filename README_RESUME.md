@@ -72,3 +72,35 @@ Puis ouvrez l'adresse suivante dans votre navigateur pour visualiser les résult
 * [visualize_hgp.html](file:///workspaces/Zoltan-SemanticKITTI/visualize_hgp.html) : Code du visualiseur 3D interactif.
 * [src/generate_visualizations.py](file:///workspaces/Zoltan-SemanticKITTI/src/generate_visualizations.py) : Script de pré-calcul optimisé.
 * `visualize/available_data.json` : Catalogue indiquant au navigateur quelles options charger (déjà pré-rempli dans le dépôt git par anticipation).
+
+---
+
+## 5. État actuel des calculs & Reprise (Mis à jour le 30 juin 2026)
+
+Le script de génération a été amélioré pour supporter la reprise automatique en sautant les configurations déjà calculées.
+
+### Avancement actuel :
+* **Séquence 00** :
+  * **Trame 0000** : **100% Complétée** (Géométrie + K=1..5 pour expZ=1.0..3.0).
+  * **Trame 0001** : **Partiellement complétée** (Géométrie + K=1..4 complets. K=5 restant).
+  * **Trames 0002 à 0004** : Non commencées.
+* **Séquence 08** :
+  * **Trames 0000 à 0004** : Non commencées.
+
+### Optimisations et correctifs appliqués :
+1. **Correction du cache Delaunay** : La clé de cache d'origine utilisait `id(M)`. Or, à chaque appel de `fit()`, du bruit aléatoire est ajouté aux coordonnées, générant une copie en mémoire avec un ID différent et rendant le cache inopérant. Nous l'avons remplacée par `(M.shape[0], K)`. Cela a activé le cache et apporté un **gain de vitesse de 5x** (la triangulation Delaunay d'ordre K n'est calculée qu'une seule fois par trame pour chaque valeur de K au lieu de se répéter pour chaque `expZ`).
+2. **Mécanisme de Reprise (Skip)** : Le script vérifie désormais si les fichiers de clusters existent déjà et ne sont pas vides, sautant le calcul si c'est le cas.
+
+### Pour reprendre le travail :
+1. **Lancer la génération en tâche de fond** :
+   ```bash
+   python src/generate_visualizations.py
+   ```
+   *(Le script reprendra automatiquement à la Trame 0001, K=5)*
+
+2. **Lancer le serveur de visualisation 3D** :
+   ```bash
+   python -m http.server 8000
+   ```
+   *(Accédez à http://localhost:8000/visualize_hgp.html)*
+
